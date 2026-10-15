@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font-size:14px;font-family:system-ui,sans-serif}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<title>Catch-up Cards</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: a single-screen "game board" with round tabs on top; big, high-contrast controls that stay legible when shrunk in a Teams screen share. */
+:root{
+  --bg:#E9F0F4; --surface:#FFFFFF; --ink:#13283B; --muted:#4D6374; --line:#C6D5DF;
+  --sun:#FFC940; --sun-ink:#3A2A00; --teal:#14807D; --teal-ink:#FFFFFF; --pick:#E2604A;
+  --soft:#DCE8EF;
+  --display:"Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", Verdana, system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1B26; --surface:#162837; --ink:#E7EFF4; --muted:#9BB0BF; --line:#2A4253;
+  --sun:#F4BD38; --sun-ink:#2A1E00; --teal:#2AA19D; --teal-ink:#03201F; --pick:#F27A63; --soft:#1D3344; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1B26; --surface:#162837; --ink:#E7EFF4; --muted:#9BB0BF; --line:#2A4253;
+  --sun:#F4BD38; --sun-ink:#2A1E00; --teal:#2AA19D; --teal-ink:#03201F; --pick:#F27A63; --soft:#1D3344; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:18px;line-height:1.5}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.1}
+h2{font-size:clamp(1.7rem,4vw,2.4rem);font-weight:800}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--pick);outline-offset:2px}
+
+.top{position:sticky;top:env(safe-area-inset-top, 0px);z-index:5;background:var(--bg);border-bottom:2px solid var(--line)}
+.top .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding-block:12px}
+.brand{font-family:var(--display);font-weight:800;font-size:1.25rem;display:flex;align-items:center;gap:10px}
+.brand i{width:22px;height:28px;border-radius:5px;background:var(--sun);transform:rotate(-8deg);box-shadow:8px 2px 0 -1px var(--teal)}
+nav{display:flex;flex-wrap:wrap;gap:6px}
+nav button{border:2px solid var(--line);background:transparent;border-radius:999px;padding:5px 14px;font-size:.9rem;font-weight:700;color:var(--muted)}
+nav button[aria-current="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+
+main{padding-block:28px 48px}
+section{display:grid;gap:22px}
+.kicker{font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--teal)}
+.lede{color:var(--muted);max-width:60ch}
+
+.btn{border:0;border-radius:12px;padding:12px 22px;font-weight:700;background:var(--ink);color:var(--bg)}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
+.btn:disabled{opacity:.35;cursor:default}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+
+/* Start */
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;list-style:none;padding:0;margin:0}
+.rules li{background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:16px 18px;display:grid;gap:4px}
+.rules b{font-family:var(--display);font-size:1.2rem}
+.rules span{color:var(--muted);font-size:.95rem}
+label.field{display:grid;gap:6px;max-width:340px;font-weight:700}
+input[type=text],textarea{font:inherit;color:var(--ink);background:var(--surface);border:2px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+
+/* This or That */
+.tot{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:stretch}
+.choice{border:3px solid var(--line);background:var(--surface);border-radius:20px;padding:34px 18px;font-family:var(--display);font-weight:800;font-size:clamp(1.5rem,4.5vw,2.6rem);min-height:170px;transition:transform .15s, border-color .15s, background .15s}
+.choice:hover{transform:translateY(-3px)}
+.choice[aria-pressed="true"]{border-color:var(--pick);background:var(--pick);color:var(--surface)}
+.or{align-self:center;font-family:var(--display);font-weight:800;font-size:1.3rem;color:var(--muted)}
+.count{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:700}
+@media (max-width:560px){.tot{grid-template-columns:1fr}.choice{min-height:110px;padding:22px}}
+
+/* Mystery cards */
+.legend{display:flex;flex-wrap:wrap;gap:18px;font-weight:700;font-size:.95rem}
+.legend span{display:flex;align-items:center;gap:8px}
+.legend i{width:18px;height:18px;border-radius:5px;display:inline-block}
+.deck{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+@media (max-width:720px){.deck{grid-template-columns:repeat(4,1fr)}}
+@media (max-width:420px){.deck{gap:8px}}
+.card{aspect-ratio:3/4;max-width:100%;border:0;border-radius:14px;font-family:var(--display);font-weight:800;font-size:clamp(1.6rem,4vw,2.4rem);display:grid;place-items:center;position:relative;transition:transform .15s}
+.card.fun{background:var(--sun);color:var(--sun-ink)}
+.card.school{background:var(--teal);color:var(--teal-ink)}
+.card:hover{transform:rotate(-2deg) translateY(-3px)}
+.card.done{opacity:.3}
+.card.done::after{content:attr(data-mark);position:absolute;bottom:8px;font-family:var(--body);font-size:.75rem;letter-spacing:.08em;text-transform:uppercase}
+.reveal{background:var(--surface);border:3px solid var(--line);border-radius:20px;padding:26px;display:grid;gap:16px;animation:flip .45s ease}
+.reveal.fun{border-color:var(--sun)} .reveal.school{border-color:var(--teal)}
+.reveal h3{font-size:clamp(1.5rem,3.6vw,2.2rem);font-weight:800}
+.tag{justify-self:start;border-radius:999px;padding:3px 12px;font-size:.8rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.tag.fun{background:var(--sun);color:var(--sun-ink)} .tag.school{background:var(--teal);color:var(--teal-ink)}
+@keyframes flip{from{transform:perspective(900px) rotateY(80deg);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.reveal{animation:none}.choice,.card{transition:none}}
+
+/* Weather */
+.wx{display:grid;gap:12px}
+.wxrow{background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:14px 16px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 16px;align-items:center}
+.wxrow b{font-family:var(--display);font-size:1.2rem}
+.wxopts{display:flex;flex-wrap:wrap;gap:6px}
+.wxopts button{border:2px solid var(--line);background:var(--bg);border-radius:12px;width:58px;height:58px;font-size:1.7rem;line-height:1}
+.wxopts button[aria-pressed="true"]{border-color:var(--pick);background:var(--pick)}
+.wxkey{display:flex;flex-wrap:wrap;gap:6px 18px;color:var(--muted);font-size:.9rem}
+@media (max-width:620px){.wxrow{grid-template-columns:1fr}}
+
+/* Wrap-up */
+.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.sum > div{background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:10px;align-content:start;min-width:0}
+.sum h3{font-size:1.25rem}
+.sum ul{margin:0;padding-left:1.1em;display:grid;gap:6px}
+.sum .note{color:var(--muted)}
+.empty{color:var(--muted);font-style:italic}
+.toast{color:var(--teal);font-weight:700}
+/* Car park */
+.parkgrid{display:grid;grid-template-columns:minmax(0,584px) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:820px){.parkgrid{grid-template-columns:minmax(0,1fr)}}
+.lotwrap{display:grid;grid-template-columns:minmax(0,520px) 60px;overflow:hidden;padding:6px 0 6px 6px}
+.lot{position:relative;width:100%;max-width:100%;aspect-ratio:1;background-color:#3A4550;background-image:linear-gradient(to right,rgba(255,255,255,.13) 2px,transparent 2px),linear-gradient(to bottom,rgba(255,255,255,.13) 2px,transparent 2px);background-size:calc(100% / 6) calc(100% / 6)}
+.kerb{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.veh{position:absolute;border:0;padding:0;background:none;touch-action:none;cursor:grab;transition:left .18s ease,top .18s ease}
+.veh svg{display:block;width:100%;height:100%;pointer-events:none}
+.lot{-webkit-user-select:none;user-select:none}
+.veh.drag{transition:none;cursor:grabbing;z-index:2}
+.veh.out{transition:transform .9s ease-in,opacity .9s ease-in;transform:translateX(160%);opacity:0}
+.veh:focus-visible{outline:3px solid #FFD84D;outline-offset:-3px;border-radius:14px}
+.exit{position:relative}
+.exit span{position:absolute;left:10px;top:calc(250% / 6);transform:translateY(-50%);font-family:var(--display);font-weight:800;font-size:.9rem;letter-spacing:.06em;color:var(--teal);display:grid;justify-items:center;gap:2px}
+.parkside{display:grid;gap:16px;align-content:start}
+.lvls{display:flex;flex-wrap:wrap;gap:8px}
+.lvls button{border:2px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 16px;font-weight:700}
+.lvls button[aria-current="true"]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+.parkbar{display:flex;flex-wrap:wrap;gap:6px 18px}
+.win{background:var(--surface);border:3px solid var(--pick);border-radius:16px;padding:16px 18px;display:grid;gap:12px}
+.win b{font-family:var(--display);font-size:1.3rem;line-height:1.2}
+.tips{margin:0;padding-left:1.1em;color:var(--muted);display:grid;gap:4px;font-size:.95rem}
+@media (prefers-reduced-motion:reduce){.veh{transition:none}.veh.out{transition:opacity .3s;transform:none}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><i></i>Catch-up Cards</div>
+    <nav id="nav" aria-label="Rounds">
+      <button data-go="start">Start</button>
+      <button data-go="tot">1 · This or That</button>
+      <button data-go="cards">2 · Mystery Cards</button>
+      <button data-go="weather">3 · Weather Check</button>
+      <button data-go="wrap">Wrap-up</button>
+      <button data-go="park">Bonus · Car Park Escape</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="s-start">
+    <p class="kicker">Friday catch-up</p>
+    <h2 id="hello">Hello! Let's play a few quick rounds.</h2>
+    <p class="lede">Three short games so we can chat about you, your lessons with the robot, and what's working at home. You just tell me what to click.</p>
+    <ul class="rules">
+      <li><b>No wrong answers</b><span>Every answer is a good answer.</span></li>
+      <li><b>You can say "pass"</b><span>To any question, any time. No reason needed.</span></li>
+      <li><b>Break whenever</b><span>We can stop, pause or skip a round.</span></li>
+    </ul>
+    <label class="field" for="name">Your name (optional)
+      <input type="text" id="name" autocomplete="off" placeholder="Type a name">
+    </label>
+    <div class="row"><button class="btn" data-go="tot">Start round 1</button></div>
+  </section>
+
+  <section id="s-tot" hidden>
+    <p class="kicker">Round 1 · Warm-up</p>
+    <h2>This or That?</h2>
+    <p class="lede">Pick one. Quick answers are best. You can tell me why if you want to.</p>
+    <div class="tot">
+      <button class="choice" id="totA" aria-pressed="false"></button>
+      <span class="or">or</span>
+      <button class="choice" id="totB" aria-pressed="false"></button>
+    </div>
+    <div class="row">
+      <button class="btn ghost" id="totPrev">Back</button>
+      <button class="btn" id="totNext">Next</button>
+      <span class="count" id="totCount"></span>
+    </div>
+  </section>
+
+  <section id="s-cards" hidden>
+    <p class="kicker">Round 2 · Your choice</p>
+    <h2>Mystery Cards</h2>
+    <p class="lede">Pick a number and I'll turn the card over. You choose the colour, so you choose the kind of question.</p>
+    <div class="legend">
+      <span><i style="background:var(--sun)"></i>Yellow · fun questions</span>
+      <span><i style="background:var(--teal)"></i>Green · school questions</span>
+    </div>
+    <div id="reveal" hidden></div>
+    <div class="deck" id="deck"></div>
+  </section>
+
+  <section id="s-weather" hidden>
+    <p class="kicker">Round 3 · How's it going?</p>
+    <h2>Weather Check</h2>
+    <p class="lede">What's the weather like for each of these at the moment? Pick the one that fits best.</p>
+    <div class="wxkey" id="wxkey"></div>
+    <div class="wx" id="wx"></div>
+    <div class="row">
+      <label class="field" for="wxNew" style="flex:1;min-width:220px">Add something else to rate
+        <input type="text" id="wxNew" autocomplete="off" placeholder="e.g. Seeing friends">
+      </label>
+      <button class="btn ghost" id="wxAdd" style="align-self:end">Add</button>
+    </div>
+  </section>
+
+  <section id="s-wrap" hidden>
+    <p class="kicker">Wrap-up</p>
+    <h2 id="wrapTitle">Here's what I heard. Did I get it right?</h2>
+    <div class="sum" id="sum"></div>
+    <div class="row">
+      <button class="btn" id="copy">Copy summary</button>
+      <button class="btn ghost" id="reset">Start again</button>
+      <button class="btn ghost" data-go="park">Play the bonus game</button>
+      <span class="toast" id="toast" aria-live="polite"></span>
+    </div>
+    <textarea id="copyText" rows="6" hidden readonly></textarea>
+  </section>
+
+  <section id="s-park" hidden>
+    <p class="kicker">Bonus game</p>
+    <h2>Car Park Escape</h2>
+    <p class="lede">Get the red car out of the car park. Cars and trucks can only drive forwards and backwards, so you'll need to move the others out of the way. Tell me which letter to move and which way.</p>
+    <div class="parkgrid">
+      <div class="lotwrap">
+        <div class="lot" id="lot"></div>
+        <div class="exit" aria-hidden="true"><span><svg width="28" height="20" viewBox="0 0 28 20"><path d="M2 10h20M15 3l8 7-8 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>EXIT</span></div>
+      </div>
+      <div class="parkside">
+        <div class="lvls" id="lvls"></div>
+        <div class="parkbar"><span class="count" id="pMoves"></span><span class="count" id="pBest"></span></div>
+        <div class="row"><button class="btn ghost" id="pUndo">Undo</button><button class="btn ghost" id="pRestart">Restart level</button></div>
+        <div class="win" id="pWin" hidden></div>
+        <ul class="tips">
+          <li>Drag a car or truck along its lane.</li>
+          <li>Get the red car through the exit to win.</li>
+          <li>Stuck? Use Undo or start the level again.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const PAIRS = [
+  ["Cats","Dogs"],["Pizza","Burgers"],["Beach","Mountains"],["Summer","Winter"],
+  ["Sweet","Savoury"],["Films","Series"],["Video games","Board games"],["Flying","Invisibility"],
+  ["Explore space","Explore the ocean"],["Morning lessons","Afternoon lessons"],
+  ["Talking out loud","Typing in the chat"],["Working on my own","Working with others"]
+];
+const CARDS = [
+  {t:"fun", q:"What's the best thing you've learned since September?"},
+  {t:"fun", q:"What's something that's made you laugh recently?"},
+  {t:"fun", q:"If you could have any pet, real or made-up, what would it be?"},
+  {t:"fun", q:"What game, show or YouTube channel are you into right now?"},
+  {t:"fun", q:"Describe your perfect weekend."},
+  {t:"fun", q:"If you could give the AV1 robot a name, what would you call it?"},
+  {t:"school", q:"Is there another lesson you'd like to try joining with the robot?"},
+  {t:"school", q:"What do you miss about school, if anything?"},
+  {t:"school", q:"Which lesson has been easiest to join this term? Which has been trickiest?"},
+  {t:"school", q:"When work feels tricky, what helps you most?"},
+  {t:"school", q:"What's it like joining a lesson through the robot?"},
+  {t:"school", q:"What's something you're good at that school might not know about?"}
+];
+const WX = [["☀️","Sunny","going great"],["🌤️","Sun and cloud","mostly OK"],["☁️","Cloudy","not sure"],["🌧️","Rainy","a bit hard"],["⛈️","Stormy","really tough"]];
+let WX_ITEMS = ["Maths with the robot","English with the robot","Spanish with the robot","Doing schoolwork at home","Today's chat"];
+
+const $ = id => document.getElementById(id);
+let S;
+function fresh(){
+  const order = CARDS.map((c,i)=>i).sort(()=>Math.random()-.5);
+  return {name:"", tot:Array(PAIRS.length).fill(null), ti:0, order, cards:{}, open:null, wx:{}, view:"start"};
+}
+S = fresh();
+
+function nm(){ return S.name.trim(); }
+
+function go(v){
+  S.view = v;
+  ["start","tot","cards","weather","wrap","park"].forEach(k=>{ $("s-"+k).hidden = k!==v; });
+  document.querySelectorAll("#nav button").forEach(b=>b.setAttribute("aria-current", b.dataset.go===v));
+  if(v==="tot") renderTot();
+  if(v==="cards") renderCards();
+  if(v==="weather") renderWx();
+  if(v==="wrap") renderWrap();
+  if(v==="park"){ if(!P.pos.length) loadLevel(0); else renderPark(); }
+  window.scrollTo({top:0});
+}
+document.addEventListener("click", e=>{ const g=e.target.closest("[data-go]"); if(g) go(g.dataset.go); });
+
+$("name").addEventListener("input", e=>{
+  S.name = e.target.value;
+  $("hello").textContent = nm() ? `Hello ${nm()}! Let's play a few quick rounds.` : "Hello! Let's play a few quick rounds.";
+});
+
+/* Round 1 */
+function renderTot(){
+  const [a,b] = PAIRS[S.ti], pick = S.tot[S.ti];
+  $("totA").textContent=a; $("totB").textContent=b;
+  $("totA").setAttribute("aria-pressed", pick===a); $("totB").setAttribute("aria-pressed", pick===b);
+  $("totCount").textContent = `${S.ti+1} of ${PAIRS.length}`;
+  $("totPrev").disabled = S.ti===0;
+  $("totNext").textContent = S.ti===PAIRS.length-1 ? "On to round 2" : "Next";
+}
+["totA","totB"].forEach(id=>$(id).addEventListener("click",()=>{
+  const v=$(id).textContent; S.tot[S.ti] = S.tot[S.ti]===v ? null : v; renderTot();
+}));
+$("totPrev").addEventListener("click",()=>{ if(S.ti>0){S.ti--;renderTot();} });
+$("totNext").addEventListener("click",()=>{ if(S.ti<PAIRS.length-1){S.ti++;renderTot();} else go("cards"); });
+
+/* Round 2 */
+function renderCards(){
+  const deck=$("deck"); deck.innerHTML="";
+  S.order.forEach((ci,pos)=>{
+    const c=CARDS[ci], st=S.cards[ci], b=document.createElement("button");
+    b.className=`card ${c.t}${st?" done":""}`; b.textContent=pos+1;
+    b.setAttribute("aria-label",`Card ${pos+1}, ${c.t==="fun"?"fun":"school"} question${st?", "+st.status:""}`);
+    if(st) b.dataset.mark = st.status==="passed" ? "passed" : "done";
+    b.addEventListener("click",()=>{ S.open=ci; renderReveal(pos+1); });
+    deck.appendChild(b);
+  });
+  if(S.open===null) $("reveal").hidden=true;
+}
+function renderReveal(num){
+  const ci=S.open, c=CARDS[ci], st=S.cards[ci]||{}, r=$("reveal");
+  r.className=`reveal ${c.t}`; r.hidden=false;
+  r.innerHTML=`<span class="tag ${c.t}">Card ${num} · ${c.t==="fun"?"Fun":"School"}</span>
+    <h3></h3>
+    <label class="field" for="note" style="max-width:none">What you said (I'll jot it down, tell me if I get it wrong)
+      <textarea id="note" rows="2"></textarea></label>
+    <div class="row"><button class="btn" id="cDone">Done</button><button class="btn ghost" id="cPass">Pass</button><button class="btn ghost" id="cClose">Put it back</button></div>`;
+  r.querySelector("h3").textContent=c.q;
+  $("note").value = st.note||"";
+  $("cDone").onclick=()=>{ S.cards[ci]={status:"answered",note:$("note").value.trim()}; S.open=null; renderCards(); };
+  $("cPass").onclick=()=>{ S.cards[ci]={status:"passed",note:""}; S.open=null; renderCards(); };
+  $("cClose").onclick=()=>{ S.open=null; renderCards(); };
+  r.scrollIntoView({block:"nearest"});
+}
+
+/* Round 3 */
+function renderWx(){
+  $("wxkey").innerHTML = WX.map(w=>`<span>${w[0]} ${w[2]}</span>`).join("");
+  const box=$("wx"); box.innerHTML="";
+  WX_ITEMS.forEach(item=>{
+    const row=document.createElement("div"); row.className="wxrow";
+    const b=document.createElement("b"); b.textContent=item;
+    const opts=document.createElement("div"); opts.className="wxopts";
+    WX.forEach(w=>{
+      const btn=document.createElement("button");
+      btn.textContent=w[0]; btn.title=`${w[1]}: ${w[2]}`; btn.setAttribute("aria-label",`${item}: ${w[1]}`);
+      btn.setAttribute("aria-pressed", S.wx[item]===w[1]);
+      btn.onclick=()=>{ S.wx[item] = S.wx[item]===w[1] ? undefined : w[1]; renderWx(); };
+      opts.appendChild(btn);
+    });
+    row.append(b,opts); box.appendChild(row);
+  });
+}
+$("wxAdd").addEventListener("click",()=>{
+  const v=$("wxNew").value.trim(); if(v && !WX_ITEMS.includes(v)){ WX_ITEMS.push(v); $("wxNew").value=""; renderWx(); }
+});
+$("wxNew").addEventListener("keydown",e=>{ if(e.key==="Enter") $("wxAdd").click(); });
+
+/* Wrap-up */
+function summary(){
+  const picks = PAIRS.map((p,i)=>S.tot[i]).filter(Boolean);
+  const cards = S.order.filter(ci=>S.cards[ci]).map(ci=>({q:CARDS[ci].q, ...S.cards[ci]}));
+  const wx = WX_ITEMS.filter(i=>S.wx[i]).map(i=>{ const w=WX.find(x=>x[1]===S.wx[i]); return {item:i, label:w[1], icon:w[0], mean:w[2]}; });
+  return {picks,cards,wx};
+}
+function renderWrap(){
+  $("wrapTitle").textContent = nm() ? `Thanks, ${nm()}! Here's what I heard. Did I get it right?` : "Here's what I heard. Did I get it right?";
+  const {picks,cards,wx}=summary(), el=$("sum"); el.innerHTML="";
+  const block=(title, items)=>{
+    const d=document.createElement("div"); const h=document.createElement("h3"); h.textContent=title; d.appendChild(h);
+    if(!items.length){ const p=document.createElement("p"); p.className="empty"; p.textContent="Nothing yet"; d.appendChild(p); }
+    else { const ul=document.createElement("ul"); items.forEach(n=>ul.appendChild(n)); d.appendChild(ul); }
+    el.appendChild(d);
+  };
+  const li=(text,note)=>{ const l=document.createElement("li"); l.textContent=text; if(note){ const s=document.createElement("div"); s.className="note"; s.textContent=note; l.appendChild(s);} return l; };
+  block("You picked", picks.map(p=>li(p)));
+  block("Mystery cards", cards.map(c=>li(c.q, c.status==="passed" ? "Passed" : (c.note||"Answered"))));
+  block("Weather check", wx.map(w=>li(`${w.icon} ${w.item}`, `${w.label}: ${w.mean}`)));
+}
+function summaryText(){
+  const {picks,cards,wx}=summary();
+  let t=`Catch-up Cards${nm()?" with "+nm():""}\n\nThis or That picks: ${picks.join(", ")||"none"}\n\nMystery cards:\n`;
+  t += cards.length ? cards.map(c=>`- ${c.q}\n  ${c.status==="passed"?"Passed":(c.note||"Answered")}`).join("\n") : "- none";
+  t += `\n\nWeather check:\n` + (wx.length ? wx.map(w=>`- ${w.item}: ${w.label} (${w.mean})`).join("\n") : "- none");
+  return t;
+}
+$("copy").addEventListener("click",()=>{
+  const t=summaryText(), ta=$("copyText");
+  const fallback=()=>{ ta.hidden=false; ta.value=t; ta.select(); $("toast").textContent="Select all and copy the text below"; };
+  try{ navigator.clipboard.writeText(t).then(()=>{ $("toast").textContent="Copied"; ta.hidden=true; }, fallback); }catch(e){ fallback(); }
+});
+$("reset").addEventListener("click",()=>{ S=fresh(); $("name").value=""; $("hello").textContent="Hello! Let's play a few quick rounds."; $("toast").textContent=""; $("copyText").hidden=true; go("start"); });
+
+/* Bonus: Car Park Escape. Every level checked solvable; best = fewest moves. */
+const LEVELS=[
+  {name:"Easy", best:4, v:[["X",2,0,2,"h"],["A",0,2,3,"v"],["B",5,1,2,"h"],["C",2,4,2,"v"],["D",0,3,3,"h"],["E",4,0,2,"h"]]},
+  {name:"Medium", best:9, v:[["X",2,0,2,"h"],["A",3,0,2,"v"],["B",5,3,3,"h"],["C",1,2,2,"v"],["D",3,1,2,"h"],["E",4,4,2,"h"],["F",0,5,3,"v"],["G",4,2,2,"v"],["H",0,3,2,"h"],["I",2,4,2,"v"]]},
+  {name:"Hard", best:14, v:[["X",2,0,2,"h"],["A",5,2,3,"h"],["B",0,1,2,"v"],["C",3,5,2,"v"],["D",0,3,2,"h"],["E",4,1,2,"h"],["F",1,2,3,"v"],["G",1,3,2,"v"],["H",0,5,2,"v"],["I",2,4,2,"v"],["J",4,0,2,"v"],["K",0,0,2,"v"]]}
+];
+const VCOL=["#F2B33D","#3E8ED0","#56A65B","#8A5CC2","#EF8A32","#2BA3A0","#E06AA0","#9BBF3A","#6D7FD6","#C98A55","#4FB6E0"];
+const RED="#D8412F", DARK="#1B2530";
+let P={lvl:0,pos:[],hist:[],moves:0,solved:false,done:[false,false,false]};
+const lot=$("lot");
+
+function vehSVG(len,color,h,target,label){
+  const L=len*100; let g="", lx;
+  const wheels=xs=>xs.map(x=>`<rect x="${x}" y="2" width="28" height="12" rx="3" fill="${DARK}"/><rect x="${x}" y="86" width="28" height="12" rx="3" fill="${DARK}"/>`).join("");
+  if(len===2){
+    g = wheels([36,L-64]) +
+      `<rect x="8" y="10" width="${L-16}" height="80" rx="24" fill="${color}" stroke="${DARK}" stroke-width="5"/>` +
+      (target?`<rect x="14" y="44" width="${L-28}" height="12" fill="#fff" opacity=".55"/>`:"") +
+      `<rect x="52" y="22" width="16" height="56" rx="6" fill="${DARK}" opacity=".6"/>` +
+      `<rect x="72" y="20" width="54" height="60" rx="10" fill="#fff" opacity=".22"/>` +
+      `<rect x="130" y="22" width="22" height="56" rx="8" fill="${DARK}" opacity=".75"/>` +
+      `<rect x="182" y="18" width="8" height="14" rx="3" fill="#FFE9A8"/><rect x="182" y="68" width="8" height="14" rx="3" fill="#FFE9A8"/>`;
+    lx=100;
+  } else {
+    g = wheels([30,130,240]) +
+      `<rect x="8" y="8" width="284" height="84" rx="16" fill="${color}" stroke="${DARK}" stroke-width="5"/>` +
+      [56,104,152].map(x=>`<line x1="${x}" y1="16" x2="${x}" y2="84" stroke="${DARK}" stroke-width="4" opacity=".18"/>`).join("") +
+      `<line x1="204" y1="10" x2="204" y2="90" stroke="${DARK}" stroke-width="5"/><rect x="212" y="18" width="34" height="64" rx="8" fill="#fff" opacity=".22"/>` +
+      `<rect x="252" y="24" width="18" height="52" rx="6" fill="${DARK}" opacity=".75"/>` +
+      `<rect x="280" y="20" width="8" height="14" rx="3" fill="#FFE9A8"/><rect x="280" y="66" width="8" height="14" rx="3" fill="#FFE9A8"/>`;
+    lx=104;
+  }
+  const vb = h ? `0 0 ${L} 100` : `0 0 100 ${L}`;
+  const body = h ? g : `<g transform="translate(100,0) rotate(90)">${g}</g>`;
+  const [cx,cy] = h ? [lx,50] : [50,lx];
+  const tag = label ? `<circle cx="${cx}" cy="${cy}" r="18" fill="#fff" opacity=".92"/><text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-family="Atkinson Hyperlegible, Verdana, sans-serif" font-weight="700" font-size="24" fill="${DARK}">${label}</text>` : "";
+  return `<svg viewBox="${vb}" preserveAspectRatio="none" aria-hidden="true">${body}${tag}</svg>`;
+}
+
+function cellsOf(i,p){ const v=LEVELS[P.lvl].v[i], out=[]; for(let k=0;k<v[3];k++) out.push(v[4]==="h"?[v[1],p+k]:[p+k,v[2]]); return out; }
+function occ(skip){ const g=Array.from({length:6},()=>Array(6).fill(false)); LEVELS[P.lvl].v.forEach((v,i)=>{ if(i!==skip) cellsOf(i,P.pos[i]).forEach(([r,c])=>g[r][c]=true); }); return g; }
+function range(i){
+  const v=LEVELS[P.lvl].v[i], h=v[4]==="h", g=occ(i), p=P.pos[i];
+  const free=q=>h?!g[v[1]][q]:!g[q][v[2]];
+  let lo=p, hi=p; while(lo-1>=0 && free(lo-1)) lo--; while(hi+v[3]<=5 && free(hi+v[3])) hi++;
+  return [lo,hi];
+}
+function place(i){
+  const v=LEVELS[P.lvl].v[i], el=$("veh"+i), h=v[4]==="h";
+  const r=h?v[1]:P.pos[i], c=h?P.pos[i]:v[2];
+  el.style.left=(c*100/6)+"%"; el.style.top=(r*100/6)+"%";
+}
+function buildLot(){
+  lot.innerHTML = `<svg class="kerb" viewBox="0 0 600 600" preserveAspectRatio="none" aria-hidden="true"><path d="M600 200V0H0V600H600V300" fill="none" stroke="#E9EEF2" stroke-width="6" vector-effect="non-scaling-stroke"/></svg>`;
+  let ci=0;
+  LEVELS[P.lvl].v.forEach((v,i)=>{
+    const h=v[4]==="h", target=v[0]==="X", color=target?RED:VCOL[ci++ % VCOL.length];
+    const el=document.createElement("button");
+    el.className="veh"; el.id="veh"+i;
+    el.style.width=(h?v[3]:1)*100/6+"%"; el.style.height=(h?1:v[3])*100/6+"%";
+    el.setAttribute("aria-label", target?"Red car":(v[3]===3?"Truck ":"Car ")+v[0]);
+    el.innerHTML=vehSVG(v[3],color,h,target,target?"":v[0]);
+    lot.appendChild(el); place(i); wire(el,i,h);
+  });
+}
+let drag=null;
+function dragTo(e){
+  const h=LEVELS[P.lvl].v[drag.i][4]==="h", p=P.pos[drag.i];
+  const d=h?e.clientX-drag.x:e.clientY-drag.y;
+  drag.off=Math.max((drag.lo-p)*drag.cell, Math.min((drag.hi-p)*drag.cell, d));
+  drag.el.style.transform=h?`translateX(${drag.off}px)`:`translateY(${drag.off}px)`;
+}
+function endDrag(e){
+  if(!drag) return;
+  if(e && e.type==="pointerup") dragTo(e);
+  const {i,el,off,cell}=drag; drag=null;
+  el.style.transform="";
+  moveTo(i, P.pos[i]+Math.round(off/cell));
+  requestAnimationFrame(()=>el.classList.remove("drag"));
+}
+window.addEventListener("pointermove",e=>{ if(drag && e.pointerId===drag.id) dragTo(e); });
+window.addEventListener("pointerup",e=>{ if(drag && e.pointerId===drag.id) endDrag(e); });
+window.addEventListener("pointercancel",e=>{ if(drag && e.pointerId===drag.id) endDrag(e); });
+window.addEventListener("blur",()=>endDrag());
+lot.addEventListener("dragstart",e=>e.preventDefault());
+function wire(el,i,h){
+  el.addEventListener("pointerdown",e=>{
+    if(P.solved || e.button>0) return;
+    if(drag) endDrag();
+    e.preventDefault();
+    const [lo,hi]=range(i);
+    drag={i,el,id:e.pointerId,lo,hi,cell:lot.getBoundingClientRect().width/6,x:e.clientX,y:e.clientY,off:0};
+    try{ el.setPointerCapture(e.pointerId); }catch(_){}
+    el.classList.add("drag");
+  });
+  el.addEventListener("keydown",e=>{
+    if(P.solved) return;
+    const dir={ArrowLeft:h?-1:0,ArrowRight:h?1:0,ArrowUp:h?0:-1,ArrowDown:h?0:1}[e.key];
+    if(!dir) return; e.preventDefault();
+    const [lo,hi]=range(i), np=P.pos[i]+dir;
+    if(np>=lo&&np<=hi) moveTo(i,np);
+  });
+}
+function moveTo(i,np){
+  if(np===P.pos[i]) return;
+  P.hist.push(P.pos.slice()); P.pos[i]=np; P.moves++; place(i);
+  const v=LEVELS[P.lvl].v[i];
+  if(v[0]==="X" && np+v[3]===6){
+    P.solved=true; P.done[P.lvl]=true;
+    setTimeout(()=>$("veh"+i).classList.add("out"),220);
+  }
+  renderPark();
+}
+function loadLevel(n){
+  P.lvl=n; P.pos=LEVELS[n].v.map(v=>v[4]==="h"?v[2]:v[1]); P.hist=[]; P.moves=0; P.solved=false;
+  buildLot(); renderPark();
+}
+function renderPark(){
+  const L=LEVELS[P.lvl];
+  $("lvls").innerHTML="";
+  LEVELS.forEach((l,n)=>{
+    const b=document.createElement("button");
+    b.textContent=l.name+(P.done[n]?" ✓":""); b.setAttribute("aria-current", n===P.lvl);
+    b.onclick=()=>loadLevel(n); $("lvls").appendChild(b);
+  });
+  $("pMoves").textContent=`Moves: ${P.moves}`;
+  $("pBest").textContent=`Fewest possible: ${L.best}`;
+  $("pUndo").disabled=!P.hist.length||P.solved;
+  const w=$("pWin"); w.hidden=!P.solved;
+  if(P.solved){
+    const great = nm() ? `Brilliant, ${nm()}!` : "Brilliant!";
+    const extra = P.moves<=L.best ? "That's the fewest moves possible!" : `Can you do it in ${L.best} next time?`;
+    const next = P.lvl<LEVELS.length-1 ? `<button class="btn" id="pNext">Try ${LEVELS[P.lvl+1].name}</button>` : `<p>You've finished all three levels. Car park champion!</p>`;
+    w.innerHTML=`<b>${great} The red car escaped in ${P.moves} moves.</b><p>${extra}</p>${next}`;
+    const nb=$("pNext"); if(nb) nb.onclick=()=>loadLevel(P.lvl+1);
+  }
+}
+$("pUndo").addEventListener("click",()=>{ if(!P.hist.length||P.solved) return; P.pos=P.hist.pop(); P.moves--; LEVELS[P.lvl].v.forEach((_,i)=>place(i)); renderPark(); });
+$("pRestart").addEventListener("click",()=>loadLevel(P.lvl));
+
+go("start");
+</script>
+</body>
+</html>
